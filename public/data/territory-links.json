@@ -1,0 +1,374 @@
+{
+"36001": {
+"zoning": "https://www.google.com/search?q=Albany+County+NY+town+zoning+map",
+"zoningLabel": "Find the town or village zoning map",
+"site": "https://www.google.com/search?q=Albany+County+NY+real+property+tax+services",
+"roll": null
+},
+"36003": {
+"zoning": "https://www.google.com/search?q=Allegany+County+NY+town+zoning+map",
+"zoningLabel": "Find the town or village zoning map",
+"site": "https://www.google.com/search?q=Allegany+County+NY+real+property+tax+services",
+"roll": null
+},
+"36005": {
+"zoning": "https://zola.planning.nyc.gov/",
+"zoningLabel": "NYC zoning map (ZoLa)",
+"site": "https://www.nyc.gov/site/finance/property/property.page",
+"roll": "https://a836-pts-access.nyc.gov/care/search/commonsearch.aspx?mode=persprop"
+},
+"36007": {
+"zoning": "https://www.google.com/search?q=Broome+County+NY+town+zoning+map",
+"zoningLabel": "Find the town or village zoning map",
+"site": "https://www.google.com/search?q=Broome+County+NY+real+property+tax+services",
+"roll": null
+},
+"36009": {
+"zoning": "https://www.google.com/search?q=Cattaraugus+County+NY+town+zoning+map",
+"zoningLabel": "Find the town or village zoning map",
+"site": "https://www.google.com/search?q=Cattaraugus+County+NY+real+property+tax+services",
+"roll": null
+},
+"36011": {
+"zoning": "https://www.google.com/search?q=Cayuga+County+NY+town+zoning+map",
+"zoningLabel": "Find the town or village zoning map",
+"site": "https://www.google.com/search?q=Cayuga+County+NY+real+property+tax+services",
+"roll": null
+},
+"36013": {
+"zoning": "https://www.google.com/search?q=Chautauqua+County+NY+town+zoning+map",
+"zoningLabel": "Find the town or village zoning map",
+"site": "https://www.google.com/search?q=Chautauqua+County+NY+real+property+tax+services",
+"roll": null
+},
+"36015": {
+"zoning": "https://www.google.com/search?q=Chemung+County+NY+town+zoning+map",
+"zoningLabel": "Find the town or village zoning map",
+"site": "https://www.google.com/search?q=Chemung+County+NY+real+property+tax+services",
+"roll": null
+},
+"36017": {
+"zoning": "https://www.google.com/search?q=Chenango+County+NY+town+zoning+map",
+"zoningLabel": "Find the town or village zoning map",
+"site": "https://www.google.com/search?q=Chenango+County+NY+real+property+tax+services",
+"roll": null
+},
+"36019": {
+"zoning": "https://www.google.com/search?q=Clinton+County+NY+town+zoning+map",
+"zoningLabel": "Find the town or village zoning map",
+"site": "https://www.google.com/search?q=Clinton+County+NY+real+property+tax+services",
+"roll": null
+},
+"36021": {
+"zoning": "https://www.google.com/search?q=Columbia+County+NY+town+zoning+map",
+"zoningLabel": "Find the town or village zoning map",
+"site": "https://www.google.com/search?q=Columbia+County+NY+real+property+tax+services",
+"roll": null
+},
+"36023": {
+"zoning": "https://www.google.com/search?q=Cortland+County+NY+town+zoning+map",
+"zoningLabel": "Find the town or village zoning map",
+"site": "https://www.google.com/search?q=Cortland+County+NY+real+property+tax+services",
+"roll": null
+},
+"36025": {
+"zoning": "https://www.google.com/search?q=Delaware+County+NY+town+zoning+map",
+"zoningLabel": "Find the town or village zoning map",
+"site": "https://www.google.com/search?q=Delaware+County+NY+real+property+tax+services",
+"roll": null
+},
+"36027": {
+"zoning": "https://www.google.com/search?q=Dutchess+County+NY+town+zoning+map",
+"zoningLabel": "Find the town or village zoning map",
+"site": "https://www.google.com/search?q=Dutchess+County+NY+real+property+tax+services",
+"roll": null
+},
+"36029": {
+"zoning": "https://www.google.com/search?q=Erie+County+NY+town+zoning+map",
+"zoningLabel": "Find the town or village zoning map",
+"site": "https://www.google.com/search?q=Erie+County+NY+real+property+tax+services",
+"roll": null
+},
+"36031": {
+"zoning": "https://www.google.com/search?q=Essex+County+NY+town+zoning+map",
+"zoningLabel": "Find the town or village zoning map",
+"site": "https://www.google.com/search?q=Essex+County+NY+real+property+tax+services",
+"roll": null
+},
+"36033": {
+"zoning": "https://www.google.com/search?q=Franklin+County+NY+town+zoning+map",
+"zoningLabel": "Find the town or village zoning map",
+"site": "https://www.google.com/search?q=Franklin+County+NY+real+property+tax+services",
+"roll": null
+},
+"36035": {
+"zoning": "https://www.google.com/search?q=Fulton+County+NY+town+zoning+map",
+"zoningLabel": "Find the town or village zoning map",
+"site": "https://www.google.com/search?q=Fulton+County+NY+real+property+tax+services",
+"roll": null
+},
+"36037": {
+"zoning": "https://www.google.com/search?q=Genesee+County+NY+town+zoning+map",
+"zoningLabel": "Find the town or village zoning map",
+"site": "https://www.google.com/search?q=Genesee+County+NY+real+property+tax+services",
+"roll": null
+},
+"36039": {
+"zoning": "https://www.google.com/search?q=Greene+County+NY+town+zoning+map",
+"zoningLabel": "Find the town or village zoning map",
+"site": "https://www.google.com/search?q=Greene+County+NY+real+property+tax+services",
+"roll": null
+},
+"36041": {
+"zoning": "https://www.google.com/search?q=Hamilton+County+NY+town+zoning+map",
+"zoningLabel": "Find the town or village zoning map",
+"site": "https://www.google.com/search?q=Hamilton+County+NY+real+property+tax+services",
+"roll": null
+},
+"36043": {
+"zoning": "https://www.google.com/search?q=Herkimer+County+NY+town+zoning+map",
+"zoningLabel": "Find the town or village zoning map",
+"site": "https://www.google.com/search?q=Herkimer+County+NY+real+property+tax+services",
+"roll": null
+},
+"36045": {
+"zoning": "https://www.google.com/search?q=Jefferson+County+NY+town+zoning+map",
+"zoningLabel": "Find the town or village zoning map",
+"site": "https://www.google.com/search?q=Jefferson+County+NY+real+property+tax+services",
+"roll": null
+},
+"36047": {
+"zoning": "https://zola.planning.nyc.gov/",
+"zoningLabel": "NYC zoning map (ZoLa)",
+"site": "https://www.nyc.gov/site/finance/property/property.page",
+"roll": "https://a836-pts-access.nyc.gov/care/search/commonsearch.aspx?mode=persprop"
+},
+"36049": {
+"zoning": "https://www.google.com/search?q=Lewis+County+NY+town+zoning+map",
+"zoningLabel": "Find the town or village zoning map",
+"site": "https://www.google.com/search?q=Lewis+County+NY+real+property+tax+services",
+"roll": null
+},
+"36051": {
+"zoning": "https://www.google.com/search?q=Livingston+County+NY+town+zoning+map",
+"zoningLabel": "Find the town or village zoning map",
+"site": "https://www.google.com/search?q=Livingston+County+NY+real+property+tax+services",
+"roll": null
+},
+"36053": {
+"zoning": "https://www.google.com/search?q=Madison+County+NY+town+zoning+map",
+"zoningLabel": "Find the town or village zoning map",
+"site": "https://www.google.com/search?q=Madison+County+NY+real+property+tax+services",
+"roll": null
+},
+"36055": {
+"zoning": "https://www.google.com/search?q=Monroe+County+NY+town+zoning+map",
+"zoningLabel": "Find the town or village zoning map",
+"site": "https://www.google.com/search?q=Monroe+County+NY+real+property+tax+services",
+"roll": null
+},
+"36057": {
+"zoning": "https://www.google.com/search?q=Montgomery+County+NY+town+zoning+map",
+"zoningLabel": "Find the town or village zoning map",
+"site": "https://www.google.com/search?q=Montgomery+County+NY+real+property+tax+services",
+"roll": null
+},
+"36059": {
+"zoning": "https://www.google.com/search?q=Nassau+County+NY+town+zoning+map",
+"zoningLabel": "Find the town or village zoning map",
+"site": "https://www.google.com/search?q=Nassau+County+NY+real+property+tax+services",
+"roll": null
+},
+"36061": {
+"zoning": "https://zola.planning.nyc.gov/",
+"zoningLabel": "NYC zoning map (ZoLa)",
+"site": "https://www.nyc.gov/site/finance/property/property.page",
+"roll": "https://a836-pts-access.nyc.gov/care/search/commonsearch.aspx?mode=persprop"
+},
+"36063": {
+"zoning": "https://www.google.com/search?q=Niagara+County+NY+town+zoning+map",
+"zoningLabel": "Find the town or village zoning map",
+"site": "https://www.google.com/search?q=Niagara+County+NY+real+property+tax+services",
+"roll": null
+},
+"36065": {
+"zoning": "https://www.google.com/search?q=Oneida+County+NY+town+zoning+map",
+"zoningLabel": "Find the town or village zoning map",
+"site": "https://www.google.com/search?q=Oneida+County+NY+real+property+tax+services",
+"roll": null
+},
+"36067": {
+"zoning": "https://www.google.com/search?q=Onondaga+County+NY+town+zoning+map",
+"zoningLabel": "Find the town or village zoning map",
+"site": "https://www.google.com/search?q=Onondaga+County+NY+real+property+tax+services",
+"roll": null
+},
+"36069": {
+"zoning": "https://www.google.com/search?q=Ontario+County+NY+town+zoning+map",
+"zoningLabel": "Find the town or village zoning map",
+"site": "https://www.google.com/search?q=Ontario+County+NY+real+property+tax+services",
+"roll": null
+},
+"36071": {
+"zoning": "https://www.google.com/search?q=Orange+County+NY+town+zoning+map",
+"zoningLabel": "Find the town or village zoning map",
+"site": "https://www.google.com/search?q=Orange+County+NY+real+property+tax+services",
+"roll": null
+},
+"36073": {
+"zoning": "https://www.google.com/search?q=Orleans+County+NY+town+zoning+map",
+"zoningLabel": "Find the town or village zoning map",
+"site": "https://www.google.com/search?q=Orleans+County+NY+real+property+tax+services",
+"roll": null
+},
+"36075": {
+"zoning": "https://www.google.com/search?q=Oswego+County+NY+town+zoning+map",
+"zoningLabel": "Find the town or village zoning map",
+"site": "https://www.google.com/search?q=Oswego+County+NY+real+property+tax+services",
+"roll": null
+},
+"36077": {
+"zoning": "https://www.google.com/search?q=Otsego+County+NY+town+zoning+map",
+"zoningLabel": "Find the town or village zoning map",
+"site": "https://www.google.com/search?q=Otsego+County+NY+real+property+tax+services",
+"roll": null
+},
+"36079": {
+"zoning": "https://www.google.com/search?q=Putnam+County+NY+town+zoning+map",
+"zoningLabel": "Find the town or village zoning map",
+"site": "https://www.google.com/search?q=Putnam+County+NY+real+property+tax+services",
+"roll": null
+},
+"36081": {
+"zoning": "https://zola.planning.nyc.gov/",
+"zoningLabel": "NYC zoning map (ZoLa)",
+"site": "https://www.nyc.gov/site/finance/property/property.page",
+"roll": "https://a836-pts-access.nyc.gov/care/search/commonsearch.aspx?mode=persprop"
+},
+"36083": {
+"zoning": "https://www.google.com/search?q=Rensselaer+County+NY+town+zoning+map",
+"zoningLabel": "Find the town or village zoning map",
+"site": "https://www.google.com/search?q=Rensselaer+County+NY+real+property+tax+services",
+"roll": null
+},
+"36085": {
+"zoning": "https://zola.planning.nyc.gov/",
+"zoningLabel": "NYC zoning map (ZoLa)",
+"site": "https://www.nyc.gov/site/finance/property/property.page",
+"roll": "https://a836-pts-access.nyc.gov/care/search/commonsearch.aspx?mode=persprop"
+},
+"36087": {
+"zoning": "https://www.google.com/search?q=Rockland+County+NY+town+zoning+map",
+"zoningLabel": "Find the town or village zoning map",
+"site": "https://www.google.com/search?q=Rockland+County+NY+real+property+tax+services",
+"roll": null
+},
+"36091": {
+"zoning": "https://www.google.com/search?q=Saratoga+County+NY+town+zoning+map",
+"zoningLabel": "Find the town or village zoning map",
+"site": "https://www.google.com/search?q=Saratoga+County+NY+real+property+tax+services",
+"roll": null
+},
+"36093": {
+"zoning": "https://www.google.com/search?q=Schenectady+County+NY+town+zoning+map",
+"zoningLabel": "Find the town or village zoning map",
+"site": "https://www.google.com/search?q=Schenectady+County+NY+real+property+tax+services",
+"roll": null
+},
+"36095": {
+"zoning": "https://www.google.com/search?q=Schoharie+County+NY+town+zoning+map",
+"zoningLabel": "Find the town or village zoning map",
+"site": "https://www.google.com/search?q=Schoharie+County+NY+real+property+tax+services",
+"roll": null
+},
+"36097": {
+"zoning": "https://www.google.com/search?q=Schuyler+County+NY+town+zoning+map",
+"zoningLabel": "Find the town or village zoning map",
+"site": "https://www.google.com/search?q=Schuyler+County+NY+real+property+tax+services",
+"roll": null
+},
+"36099": {
+"zoning": "https://www.google.com/search?q=Seneca+County+NY+town+zoning+map",
+"zoningLabel": "Find the town or village zoning map",
+"site": "https://www.google.com/search?q=Seneca+County+NY+real+property+tax+services",
+"roll": null
+},
+"36089": {
+"zoning": "https://www.google.com/search?q=St+Lawrence+County+NY+town+zoning+map",
+"zoningLabel": "Find the town or village zoning map",
+"site": "https://www.google.com/search?q=St+Lawrence+County+NY+real+property+tax+services",
+"roll": null
+},
+"36101": {
+"zoning": "https://www.google.com/search?q=Steuben+County+NY+town+zoning+map",
+"zoningLabel": "Find the town or village zoning map",
+"site": "https://www.google.com/search?q=Steuben+County+NY+real+property+tax+services",
+"roll": null
+},
+"36103": {
+"zoning": "https://www.google.com/search?q=Suffolk+County+NY+town+zoning+map",
+"zoningLabel": "Find the town or village zoning map",
+"site": "https://www.google.com/search?q=Suffolk+County+NY+real+property+tax+services",
+"roll": null
+},
+"36105": {
+"zoning": "https://www.google.com/search?q=Sullivan+County+NY+town+zoning+map",
+"zoningLabel": "Find the town or village zoning map",
+"site": "https://www.google.com/search?q=Sullivan+County+NY+real+property+tax+services",
+"roll": null
+},
+"36107": {
+"zoning": "https://www.google.com/search?q=Tioga+County+NY+town+zoning+map",
+"zoningLabel": "Find the town or village zoning map",
+"site": "https://www.google.com/search?q=Tioga+County+NY+real+property+tax+services",
+"roll": null
+},
+"36109": {
+"zoning": "https://www.google.com/search?q=Tompkins+County+NY+town+zoning+map",
+"zoningLabel": "Find the town or village zoning map",
+"site": "https://www.google.com/search?q=Tompkins+County+NY+real+property+tax+services",
+"roll": null
+},
+"36111": {
+"zoning": "https://www.google.com/search?q=Ulster+County+NY+town+zoning+map",
+"zoningLabel": "Find the town or village zoning map",
+"site": "https://www.google.com/search?q=Ulster+County+NY+real+property+tax+services",
+"roll": null
+},
+"36113": {
+"zoning": "https://www.google.com/search?q=Warren+County+NY+town+zoning+map",
+"zoningLabel": "Find the town or village zoning map",
+"site": "https://www.google.com/search?q=Warren+County+NY+real+property+tax+services",
+"roll": null
+},
+"36115": {
+"zoning": "https://www.google.com/search?q=Washington+County+NY+town+zoning+map",
+"zoningLabel": "Find the town or village zoning map",
+"site": "https://www.google.com/search?q=Washington+County+NY+real+property+tax+services",
+"roll": null
+},
+"36117": {
+"zoning": "https://www.google.com/search?q=Wayne+County+NY+town+zoning+map",
+"zoningLabel": "Find the town or village zoning map",
+"site": "https://www.google.com/search?q=Wayne+County+NY+real+property+tax+services",
+"roll": null
+},
+"36119": {
+"zoning": "https://www.google.com/search?q=Westchester+County+NY+town+zoning+map",
+"zoningLabel": "Find the town or village zoning map",
+"site": "https://www.google.com/search?q=Westchester+County+NY+real+property+tax+services",
+"roll": null
+},
+"36121": {
+"zoning": "https://www.google.com/search?q=Wyoming+County+NY+town+zoning+map",
+"zoningLabel": "Find the town or village zoning map",
+"site": "https://www.google.com/search?q=Wyoming+County+NY+real+property+tax+services",
+"roll": null
+},
+"36123": {
+"zoning": "https://www.google.com/search?q=Yates+County+NY+town+zoning+map",
+"zoningLabel": "Find the town or village zoning map",
+"site": "https://www.google.com/search?q=Yates+County+NY+real+property+tax+services",
+"roll": null
+}
+}
