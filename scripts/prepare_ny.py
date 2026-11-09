@@ -61,6 +61,13 @@ def main():
                        'roll': 'https://a836-pts-access.nyc.gov/care/search/commonsearch.aspx?mode=persprop' if nyc else None}
     (out / 'territories.geojson').write_text(json.dumps({'type': 'FeatureCollection', 'features': terr}, separators=(',', ':')))
     (out / 'territory-links.json').write_text(json.dumps(links, indent=0))
+    # One label point per county (on its largest piece), so island counties are not labelled on every islet.
+    labels = []
+    for f in terr:
+        g = shape(f['geometry'])
+        p = (max(g.geoms, key=lambda x: x.area) if g.geom_type == 'MultiPolygon' else g).representative_point()
+        labels.append({'type': 'Feature', 'properties': {'name': f['properties']['name']}, 'geometry': {'type': 'Point', 'coordinates': [round(p.x, 5), round(p.y, 5)]}})
+    (out / 'territory-labels.geojson').write_text(json.dumps({'type': 'FeatureCollection', 'features': labels}, separators=(',', ':')))
 
     # NYC zoning districts (base districts), one zone per polygon.
     feats, index = [], []

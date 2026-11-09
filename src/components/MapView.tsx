@@ -87,8 +87,9 @@ export default function MapView(props: Props) {
             paint: { 'line-color': '#ffffff', 'line-width': ['interpolate', ['linear'], ['zoom'], 9, 4, 14, 7], 'line-opacity': 0.8 } });
           instance.addLayer({ id: 'territory-city-line', type: 'line', source: 'territories', filter: ['==', ['get', 'offIsland'], true],
             paint: { 'line-color': '#c2410c', 'line-width': ['interpolate', ['linear'], ['zoom'], 9, 2, 14, 4] } });
-          if (instance.getStyle().glyphs) instance.addLayer({ id: 'territory-label', type: 'symbol', source: 'territories', maxzoom: 14.5,
-            layout: { 'text-field': ['get', 'name'], 'text-size': ['interpolate', ['linear'], ['zoom'], 9, 10, 13, 14], 'text-font': ['Noto Sans Regular'], 'symbol-placement': 'point', 'text-max-width': 8, 'text-allow-overlap': true, 'text-ignore-placement': true },
+          instance.addSource('territory-labels', { type: 'geojson', data: '/data/territory-labels.geojson' });
+          if (instance.getStyle().glyphs) instance.addLayer({ id: 'territory-label', type: 'symbol', source: 'territory-labels', maxzoom: 14.5,
+            layout: { 'text-field': ['get', 'name'], 'text-size': ['interpolate', ['linear'], ['zoom'], 9, 10, 13, 14], 'text-font': ['Noto Sans Regular'], 'text-max-width': 8 },
             paint: { 'text-color': '#173e30', 'text-halo-color': '#ffffff', 'text-halo-width': 1.6 } });
           // Tax parcels: yellow outlines fetched live for the current view at street zoom.
           const empty: FeatureCollection = { type: 'FeatureCollection', features: [] };
