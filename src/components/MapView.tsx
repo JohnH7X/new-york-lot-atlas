@@ -23,6 +23,16 @@ interface Props {
   onMove: (position: MapPosition) => void;
 }
 
+/** Label points along each side of the given lots, rotated with the side and kept upright. */
+function edgeLabels(lots: LotFeature[], label: (e: ReturnType<typeof lotEdges>[number]) => string): FeatureCollection {
+  return { type: 'FeatureCollection', features: lots.flatMap(lot => lotEdges(lot).map(e => {
+    const lat = (e.from[1] + e.to[1]) / 2 * Math.PI / 180;
+    let angle = -Math.atan2(e.to[1] - e.from[1], (e.to[0] - e.from[0]) * Math.cos(lat)) * 180 / Math.PI;
+    if (angle > 90) angle -= 180; if (angle < -90) angle += 180; // keep text upright
+    return { type: 'Feature' as const, geometry: { type: 'Point' as const, coordinates: e.mid }, properties: { angle, label: label(e) } };
+  })) };
+}
+
 export default function MapView(props: Props) {
   const host = useRef<HTMLDivElement>(null);
   const map = useRef<LibreMap | null>(null);
@@ -102,6 +112,12 @@ export default function MapView(props: Props) {
             paint: { 'text-color': '#5a4700', 'text-halo-color': '#fff8d6', 'text-halo-width': 1.4 } });
           instance.addLayer({ id: 'lot-selected-fill', type: 'fill', source: 'lot-selected', paint: { 'fill-color': '#f2c200', 'fill-opacity': 0.28 } });
           instance.addLayer({ id: 'lot-selected-line', type: 'line', source: 'lot-selected', paint: { 'line-color': '#f2c200', 'line-width': 4 } });
+          // Side lengths of every lot in view (close zoom only), in small type; the selected lot's are larger.
+          instance.addSource('lot-all-dims', { type: 'geojson', data: empty });
+          if (instance.getStyle().glyphs) instance.addLayer({ id: 'lot-all-dims', type: 'symbol', source: 'lot-all-dims', minzoom: 17.5,
+            layout: { 'text-field': ['get', 'label'], 'text-size': ['interpolate', ['linear'], ['zoom'], 17.5, 9, 19, 11], 'text-font': ['Noto Sans Regular'], 'text-rotate': ['get', 'angle'],
+              'text-rotation-alignment': 'map', 'text-padding': 1 },
+            paint: { 'text-color': '#6b5600', 'text-halo-color': '#fffbe6', 'text-halo-width': 1.4 } });
           // Side lengths of the selected lot, written along each side.
           instance.addSource('lot-dims', { type: 'geojson', data: empty });
           if (instance.getStyle().glyphs) instance.addLayer({ id: 'lot-dims', type: 'symbol', source: 'lot-dims', minzoom: 15.5,
@@ -147,6 +163,7 @@ export default function MapView(props: Props) {
       const source = m.getSource('lots') as maplibregl.GeoJSONSource;
       if (!callbacks.current.lotsVisible || m.getZoom() < LOT_MIN_ZOOM) {
         source.setData({ type: 'FeatureCollection', features: [] });
+        (m.getSource('lot-all-dims') as maplibregl.GeoJSONSource | undefined)?.setData({ type: 'FeatureCollection', features: [] });
         setLotStatus(callbacks.current.lotsVisible ? 'Zoom in to see tax parcels' : '');
         return;
       }
@@ -155,7 +172,9 @@ export default function MapView(props: Props) {
       setLotStatus('Loading tax parcels…');
       lotsInBounds([b.getWest(), b.getSouth(), b.getEast(), b.getNorth()], controller.signal).then(data => {
         if (controller.signal.aborted) return;
-        source.setData({ ...data, features: data.features.filter(f => f.geometry) } as FeatureCollection);
+        const lots = data.features.filter(f => f.geometry);
+        source.setData({ ...data, features: lots } as FeatureCollection);
+        (m.getSource('lot-all-dims') as maplibregl.GeoJSONSource | undefined)?.setData(edgeLabels(lots as LotFeature[], e => e.length >= 3 ? `${(e.length * FT_PER_M).toFixed(0)} ft` : ''));
         setLotStatus('');
       }).catch(() => { if (!controller.signal.aborted) setLotStatus('Cadastre lots unavailable'); });
     }
@@ -200,13 +219,7 @@ export default function MapView(props: Props) {
     const source = m.getSource('lot-selected') as maplibregl.GeoJSONSource | undefined;
     source?.setData({ type: 'FeatureCollection', features: props.selectedLot?.geometry ? [props.selectedLot as never] : [] });
     const dims = m.getSource('lot-dims') as maplibregl.GeoJSONSource | undefined;
-    const edges = props.selectedLot ? lotEdges(props.selectedLot) : [];
-    dims?.setData({ type: 'FeatureCollection', features: edges.map(e => {
-      const lat = (e.from[1] + e.to[1]) / 2 * Math.PI / 180;
-      let angle = -Math.atan2(e.to[1] - e.from[1], (e.to[0] - e.from[0]) * Math.cos(lat)) * 180 / Math.PI;
-      if (angle > 90) angle -= 180; if (angle < -90) angle += 180; // keep text upright
-      return { type: 'Feature', geometry: { type: 'Point', coordinates: e.mid }, properties: { angle, label: `${e.length.toFixed(1)} m · ${(e.length * FT_PER_M).toFixed(0)} ft` } };
-    }) });
+    dims?.setData(edgeLabels(props.selectedLot ? [props.selectedLot] : [], e => `${(e.length * FT_PER_M).toFixed(1)} ft · ${e.length.toFixed(1)} m`));
   }, [props.selectedLot, ready]);
 
   useEffect(() => {
