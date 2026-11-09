@@ -131,7 +131,7 @@ export default function LotPanel({ lot, address, preferPoint, zoneLine, zoneDeta
 
     <button className="owner-button" onClick={() => setOwnerOpen(o => !o)} disabled={units === null}><UserSearch size={15}/> Get owner</button>
     {ownerOpen && <div className="owner-steps" role="status">
-      {unit?.owner ? <><b>{unit.owner}</b>{unit.ownerMail && <p>Mailing address: {unit.ownerMail}</p>}<p className="detail-foot">Owner of record on the {unit.marketDate || 'assessment roll'} (NYS public tax parcel data). Confirm the vesting deed{nyc ? ' on ACRIS' : ' with the county clerk'}.</p></>
+      {unit?.owner ? <><b>{unit.owner}</b>{unit.ownerMail && <p>Mailing address: {unit.ownerMail}</p>}<p className="detail-foot">Owner of record on the county assessment roll (NYS public tax parcel data). Confirm the vesting deed{nyc ? ' on ACRIS' : ' with the county clerk'}.</p></>
         : <p>This county does not publish owner names in the state’s open parcel layer. Use the county’s real property search below.</p>}
       <ol>
         {acris && <li><a href={acris} target="_blank" rel="noreferrer">ACRIS deeds & mortgages <ArrowUpRight size={11}/></a> — recorded documents for this BBL, free.</li>}
