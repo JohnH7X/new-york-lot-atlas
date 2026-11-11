@@ -3,7 +3,7 @@ import { ArrowUpRight, ChevronDown, Copy, Eye, FileText, MapPin, UserSearch, X }
 import type { LotSnapshot } from '../lib/files';
 import { useDrag } from '../lib/useDrag';
 import { territoryAt, territoryLinks, type Territory, type TerritoryLinks } from '../lib/territory';
-import { FT_PER_M, lotArea, lotCenter, lotEdges, SQFT_PER_M2, streetViewUrl, unitsInLot, type LotFeature, type Unit } from '../lib/lots';
+import { acrisSales, infrastructureAt, type Infra, type Sale, FT_PER_M, lotArea, lotCenter, lotEdges, SQFT_PER_M2, streetViewUrl, unitsInLot, type LotFeature, type Unit } from '../lib/lots';
 
 const n = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
 const dollars = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
@@ -30,6 +30,22 @@ export default function LotPanel({ lot, address, preferPoint, zoneLine, zoneDeta
   const [units, setUnits] = useState<Unit[] | null>(null);
   const [copied, setCopied] = useState(false);
   const [ownerOpen, setOwnerOpen] = useState(false);
+  const [infra, setInfra] = useState<Infra | null | 'loading'>('loading');
+  const [sales, setSales] = useState<Sale[] | null | 'loading'>(null);
+  useEffect(() => {
+    let active = true; setInfra('loading');
+    const c = lotCenter(lot);
+    if (!c) { setInfra(null); return; }
+    void infrastructureAt(c).then(r => { if (active) setInfra(r); }).catch(() => { if (active) setInfra(null); });
+    return () => { active = false; };
+  }, [lot]);
+  useEffect(() => {
+    const b = units?.[0]?.bbl;
+    if (!b || b.length !== 10) { setSales(null); return; }
+    let active = true; setSales('loading');
+    void acrisSales(b).then(r => { if (active) setSales(r); }).catch(() => { if (active) setSales(null); });
+    return () => { active = false; };
+  }, [units]);
   const [territory, setTerritory] = useState<{ place: Territory; links: TerritoryLinks | null } | null | 'none'>(null);
   const drag = useDrag('detail');
   useEffect(() => {
@@ -78,7 +94,7 @@ export default function LotPanel({ lot, address, preferPoint, zoneLine, zoneDeta
       lot: key, address: title || '', place: placeLabel, zone: zoneText || (unit?.zoning ? `Zoning ${unit.zoning}${unit.overlays ? ` · overlays ${unit.overlays}` : ''}${unit.special ? ` · special district ${unit.special}` : ''}` : ''),
       zoneGrid: zola || zoneGrid, zoningUrl: links?.zoning, rollUrl: acris || rollUrl,
       center: viewPoint, rings: polys.map(p => p[0].map(([x, y]) => [x, y] as [number, number])), area, perimeter, sides: edges.map(e => e.length),
-      unit: unit || null, capturedAt: new Date().toISOString()
+      unit: unit ? { ...unit, sales: Array.isArray(sales) ? sales : null, infra: infra === 'loading' ? null : infra } : null, capturedAt: new Date().toISOString()
     });
   }
 
@@ -98,8 +114,15 @@ export default function LotPanel({ lot, address, preferPoint, zoneLine, zoneDeta
     {units?.length === 0 && <p className="detail-note">No assessment record on this parcel. Check the county’s real property office.</p>}
 
     {unit && <>
-      <div className="value-hero"><span>{unit.marketValue ? 'Full market value' : 'Total assessed value'}</span><strong>{money(unit.marketValue ?? unit.totalValue)}</strong>
-        <small>Assessed {money(unit.totalValue)} · Land {money(unit.landValue)}{unit.marketDate && <> · {unit.marketDate}</>}</small></div>
+      <div className="value-hero"><span>{unit.marketValue ? 'Full market value · appraisal' : 'Total assessed value'}</span><strong>{money(unit.marketValue ?? unit.totalValue)}</strong>
+        <small>{unit.marketDate || 'Assessment roll'} · {nyc ? 'NYC Department of Finance' : `${unit.muni || unit.county || ''} assessor`}</small></div>
+      <div className="owner-line"><span>Owner of record</span><b>{unit.owner || 'Not published by this county — see its property search'}</b>{unit.ownerMail && <small>{unit.ownerMail}</small>}</div>
+      <table className="appraisal"><tbody>
+        {unit.marketValue != null && <tr className="sum"><th>Full market value</th><td>{money(unit.marketValue)}</td></tr>}
+        {unit.previousValue != null && <tr><th>Previous year market value</th><td>{money(unit.previousValue)}</td></tr>}
+        <tr><th>Land assessed value</th><td>{money(unit.landValue)}</td></tr>
+        <tr><th>Total assessed value</th><td>{money(unit.totalValue)}</td></tr>
+      </tbody></table>
       <dl className="fact-grid">
         <div><dt>Lot area</dt><dd>{sqft(unit.landArea ?? area, true)}</dd></div>
         <div><dt>Building area</dt><dd>{sqft(unit.floorArea)}</dd></div>
@@ -113,7 +136,27 @@ export default function LotPanel({ lot, address, preferPoint, zoneLine, zoneDeta
         {(unit.landmark || unit.histDistrict) && <div><dt>Landmark</dt><dd>{[unit.landmark, unit.histDistrict].filter(Boolean).join(' · ')}</dd></div>}
         {unit.agDistrict && <div><dt>Agricultural district</dt><dd>{unit.agDistrict}</dd></div>}
       </dl>
-      {unit.utilities && <p className="detail-foot">{unit.utilities}</p>}
+      <div className="sales"><b>Sales & deed history{Array.isArray(sales) && sales.length ? ` · ${sales.length} deed${sales.length > 1 ? 's' : ''}` : ''}</b>
+        {sales === 'loading' && <p className="detail-foot">Loading deeds from ACRIS…</p>}
+        {Array.isArray(sales) && sales.slice(0, 25).map((x, i) => <div key={i}><span>{x.date}</span><strong>{x.price && x.price > 100 ? money(x.price) : 'No consideration'}</strong>
+          <small>{[x.type, x.units > 1 ? `${x.units} units/lots` : '', x.ref].filter(Boolean).join(' · ')}{(x.seller || x.buyer) && <><br/>{x.seller && <>From {x.seller}</>}{x.seller && x.buyer && ' → '}{x.buyer && <>to {x.buyer}</>}</>}</small></div>)}
+        {Array.isArray(sales) && !sales.length && <p className="detail-foot">No deed recorded in ACRIS for this lot (records start in 1966; condo units have their own lots).</p>}
+        {!nyc && <>{unit.deedRef && <div><span>Last deed</span><strong>{unit.deedRef}</strong><small>county clerk</small></div>}
+          <p className="detail-foot">Sale prices outside NYC are filed with the state (RP-5217) but not published per parcel. Dates, prices and parties are in the {unit.county} County Clerk’s records; sold prices also come from the MLS.</p></>}
+        {nyc && Array.isArray(sales) && sales.length > 25 && <p className="detail-foot">Showing the 25 latest of {sales.length}. Full list on ACRIS.</p>}
+      </div>
+      <details className="infra" open>
+        <summary>Infrastructure availability<ChevronDown size={14}/></summary>
+        <ul>
+          <li className={nyc || /public|comm/i.test(unit.water || '') ? 'ok' : /private|well/i.test(unit.water || '') ? 'warn' : 'q'}><span>Water</span><b>{nyc ? 'NYC public water (DEP)' : unit.water || 'Not on the roll'}</b></li>
+          <li className={nyc || /public|comm/i.test(unit.sewer || '') ? 'ok' : /private|septic/i.test(unit.sewer || '') ? 'warn' : 'q'}><span>Sewer</span><b>{nyc ? 'NYC public sewer (DEP)' : unit.sewer || 'Not on the roll'}</b></li>
+          <li className={infra !== 'loading' && infra?.electric.length ? 'ok' : 'q'}><span>Electric</span><b>{infra === 'loading' ? 'Checking…' : infra?.electric.join(', ') || 'Check with the utility'}{unit.utilityDesc && <small> · roll: {unit.utilityDesc}</small>}</b></li>
+          {unit.heat && <li className="q"><span>Heat / fuel</span><b>{unit.heat}</b></li>}
+          <li className="q"><span>Internet</span><b>{viewPoint && <a href={`https://broadbandmap.fcc.gov/location-summary/fixed?lat=${viewPoint[1]}&lon=${viewPoint[0]}&zoom=17`} target="_blank" rel="noreferrer">FCC broadband map <ArrowUpRight size={10}/></a>}</b></li>
+          <li className="q"><span>Gas · road · drainage · fees</span><b>Confirm with the utility and the town</b></li>
+        </ul>
+        <p className="detail-foot">Water, sewer and utilities: the assessor’s roll (outside NYC). Electric: NYS PSC service territories. Full checklist in the property file.</p>
+      </details>
     </>}
     {!unit && area !== null && <dl className="fact-grid"><div><dt>Lot area (drawing)</dt><dd>{sqft(area, true)}</dd></div></dl>}
 

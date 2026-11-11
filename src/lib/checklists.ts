@@ -68,6 +68,15 @@ export const PREOFFER_CHECKS: Check[] = [
   { key: 'lead', label: 'Lead-based paint disclosure (built before 1978)' },
   { key: 'inspection', label: 'Home inspection booked or contingency written' },
   { key: 'well', label: 'Well water and septic tests (if private systems)' },
+  { key: 'water', label: 'Infrastructure · Water: public (municipal / water district) or private well', hint: 'Ask the water district for a will-serve letter; a well needs a potability test.' },
+  { key: 'sewer', label: 'Infrastructure · Sewer: public sewer district or private septic (county health dept. records)' },
+  { key: 'electric', label: 'Infrastructure · Electric utility and service at the lot confirmed', url: 'https://dps.ny.gov/' },
+  { key: 'gas', label: 'Infrastructure · Natural gas available (or oil / propane)' },
+  { key: 'broadband', label: 'Infrastructure · Internet / broadband providers at the address', url: 'https://broadbandmap.fcc.gov/home' },
+  { key: 'road', label: 'Infrastructure · Frontage on a public road; who maintains it (town, county, state, private)' },
+  { key: 'drainage', label: 'Infrastructure · Drainage and stormwater (MS4) requirements' },
+  { key: 'fees', label: 'Infrastructure · Hook-up, district and capacity fees (vacant land / new build)' },
+  { key: 'hydrant', label: 'Infrastructure · Fire district, hydrant and station distance (insurance rating)' },
   { key: 'financing', label: 'Mortgage commitment and insurance confirmed' },
   { key: 'leases', label: 'Leases, rent roll and rent-stabilization status reviewed', url: 'https://hcr.ny.gov/rent-administration' },
   { key: 'taxes', label: 'Property and school taxes confirmed, no arrears' },
@@ -118,6 +127,15 @@ export function preofferFindings(f: PropertyFile): Record<string, Finding> {
   const nyc = /New York City/.test(s.place);
   const price = Number(f.mandate.price || f.listing.price || f.mandate.budget) || 0;
   if (u) out.roll = { note: [u.owner && `Owner of record: ${u.owner}`, u.use, u.builtYear && `built ${u.builtYear}`, u.totalValue && `assessed ${money(u.totalValue)}`, u.marketValue && `full market ${money(u.marketValue)}`, u.marketDate].filter(Boolean).join(' · ') + '.', done: true };
+  if (u) {
+    const nycLot = !!u.bbl;
+    out.water = nycLot ? { note: 'NYC public water (DEP).', done: true } : u.water ? { note: `Assessment roll: ${u.water}.${/private|well/i.test(u.water) ? ' Order a well water test.' : ' Confirm with the water district.'}` } : { note: 'Water supply not on the roll: ask the town.' };
+    out.sewer = nycLot ? { note: 'NYC public sewer (DEP).', done: true } : u.sewer ? { note: `Assessment roll: ${u.sewer}.${/private|septic/i.test(u.sewer) ? ' Get the septic records from the county health department and an inspection.' : ' Confirm with the sewer district.'}` } : { note: 'Sewer type not on the roll: ask the town.' };
+    if (u.infra?.electric.length) out.electric = { note: `Electric utility: ${u.infra.electric.join(', ')} (NYS PSC territories).${u.utilityDesc ? ` Roll: ${u.utilityDesc}.` : ''}` };
+    if (u.sales?.length) out.comparables = { note: 'Deeds on ACRIS: ' + u.sales.slice(0, 4).map(x => `${x.date}${x.price && x.price > 100 ? ` ${money(x.price)}` : ''}${x.buyer ? ` to ${x.buyer}` : ''}`).join(' · ') + '. Pull area comparables for the last 12 months.' };
+    else if (u.deedRef) out.comparables = { note: `Last deed: ${u.deedRef} (county clerk). Pull comparables for the last 12 months.` };
+  }
+  if (s.center) out.broadband = { note: `Check providers at ${s.center[1].toFixed(5)}, ${s.center[0].toFixed(5)} on the FCC broadband map.` };
   out.survey = { note: `Tax map ${s.lot}${s.area ? ` · about ${Math.round(s.area * 10.7639).toLocaleString()} ft² on the tax map` : ''}${u?.frontage ? ` · frontage ${Math.round(u.frontage * 3.28084)} ft` : ''}. Compare with the survey.` };
   if (u?.zoning) out.zoning = { note: `Zoning ${u.zoning}${u.overlays ? `, overlay ${u.overlays}` : ''}${u.special ? `, special district ${u.special}` : ''}. FAR ${u.far}. Confirm on ZoLa.` };
   else out.zoning = { note: nyc ? 'Open ZoLa for the parcel’s districts.' : `Zoning is set by ${u?.muni || 'the town or village'}; get its zoning map and code (often on eCode360).` };

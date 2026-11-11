@@ -101,7 +101,7 @@ export interface Unit {
   marketDate: string | null; landValue: number | null; buildingValue: number | null; totalValue: number | null; previousValue: number | null;
   frontage: number | null;
   owner?: string | null; ownerMail?: string | null; marketValue?: number | null; propClass?: string | null; school?: string | null;
-  county?: string | null; muni?: string | null; swis?: string | null; sbl?: string | null; bbl?: string | null; agDistrict?: string | null;
+  county?: string | null; muni?: string | null; swis?: string | null; sbl?: string | null; bbl?: string | null; agDistrict?: string | null; sewer?: string | null; water?: string | null; utilityDesc?: string | null; heat?: string | null; deedRef?: string | null; sales?: Sale[] | null; infra?: Infra | null;
   utilities?: string | null; bedrooms?: number | null; baths?: number | null;
   zoning?: string | null; overlays?: string | null; special?: string | null; far?: string | null; landmark?: string | null; histDistrict?: string | null;
   depth?: number | null;
@@ -132,6 +132,36 @@ export function useLabel(code: string | null, nyc: boolean): string | null {
 }
 
 /** The parcel's roll record as a unit (NYS has one record per parcel), with NYC zoning from MapPLUTO. */
+export interface Sale { date: string; price: number | null; type: string; buyer: string | null; seller: string | null; ref: string | null; units: number }
+export interface Infra { electric: string[] }
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const DOC: Record<string, string> = { DEED: 'Deed', DEEDO: 'Deed (other)', 'DEED, RC': 'Deed, recorded copy', DEEDP: 'Deed, pre-RPT tax', CORRD: 'Correction deed', 'DEED, TS': 'Timeshare deed', CONDEED: 'Confirmatory deed' };
+/** Every deed on a NYC lot, from ACRIS (NYC Department of Finance) open data: legals → master → parties. */
+export async function acrisSales(bbl: string): Promise<Sale[]> {
+  const soc = async (id: string, where: string, extra: Record<string, string> = {}) =>
+    (await (await fetch(`https://data.cityofnewyork.us/resource/${id}.json?${new URLSearchParams({ $where: where, $limit: '1000', ...extra })}`)).json()) as Record<string, string>[];
+  const legals = await soc('8h5j-fqxa', `borough='${bbl[0]}' AND block='${Number(bbl.slice(1, 6))}' AND lot='${Number(bbl.slice(6))}'`, { $select: 'document_id,unit' });
+  const ids = [...new Set(legals.map(l => l.document_id))];
+  if (!ids.length) return [];
+  const docs: Record<string, string>[] = [];
+  for (let i = 0; i < ids.length; i += 150) docs.push(...await soc('bnx9-e6tj', `document_id in(${ids.slice(i, i + 150).map(x => `'${x}'`).join(',')}) AND doc_type in(${Object.keys(DOC).map(x => `'${x}'`).join(',')})`));
+  const deeds = docs.filter((d, i, l) => l.findIndex(x => x.document_id === d.document_id) === i);
+  const parties = deeds.length ? await soc('636b-3b5g', `document_id in(${deeds.slice(0, 150).map(d => `'${d.document_id}'`).join(',')})`, { $select: 'document_id,party_type,name' }) : [];
+  const who = (id: string, t: string) => [...new Set(parties.filter(p => p.document_id === id && p.party_type === t).map(p => p.name))].join(', ') || null;
+  return deeds.map(d => {
+    const dt = new Date(d.document_date || d.recorded_datetime);
+    return { date: isNaN(+dt) ? '—' : `${MONTHS[dt.getUTCMonth()]} ${dt.getUTCDate()}, ${dt.getUTCFullYear()}`, t: +dt || 0, price: Number(d.document_amt) || null, type: DOC[d.doc_type] || d.doc_type,
+      seller: who(d.document_id, '1'), buyer: who(d.document_id, '2'), ref: d.crfn ? `CRFN ${d.crfn}` : d.reel_nbr && d.reel_nbr !== '0' ? `Reel ${d.reel_nbr} / page ${d.reel_pg}` : null,
+      units: new Set(legals.filter(l => l.document_id === d.document_id).map(l => l.unit || '')).size };
+  }).sort((a, b) => b.t - a.t).map(({ t: _t, ...x }) => x);
+}
+const ELECTRIC = 'https://services1.arcgis.com/XYYbHZEGlLw0p2gz/arcgis/rest/services/NYS_Electric_Utility_Service_Territories_20240820/FeatureServer/0/query';
+export async function infrastructureAt([x, y]: [number, number]): Promise<Infra> {
+  const q = new URLSearchParams({ geometry: `${x},${y}`, geometryType: 'esriGeometryPoint', inSR: '4326', spatialRel: 'esriSpatialRelIntersects', outFields: 'comp_full,notes', returnGeometry: 'false', f: 'json' });
+  const d = await (await fetch(`${ELECTRIC}?${q}`)).json();
+  return { electric: [...new Set<string>((d.features || []).map((f: { attributes: { comp_full: string } }) => f.attributes.comp_full).filter(Boolean))] };
+}
+
 export async function unitsInLot(feature: LotFeature): Promise<Unit[]> {
   const p = feature.properties;
   if (!p || (p.TOTAL_AV == null && p.PRIMARY_OWNER == null && p.PROP_CLASS == null)) return [];
@@ -152,7 +182,9 @@ export async function unitsInLot(feature: LotFeature): Promise<Unit[]> {
     marketValue: num(p.FULL_MARKET_VAL), propClass: cls, school: str(p.SCHOOL_NAME), county: str(p.COUNTY_NAME), muni: str(p.MUNI_NAME),
     swis: str(p.SWIS), sbl: str(p.PRINT_KEY) || str(p.SBL), bbl: nyc ? str(p.SBL) : null, agDistrict: str(p.AG_DIST_NAME),
     utilities: [str(p.SEWER_DESC), str(p.WATER_DESC), str(p.HEAT_TYPE_DESC), str(p.FUEL_TYPE_DESC)].filter(Boolean).join(' · ') || null,
-    bedrooms: num(p.NBR_BEDROOMS), baths: num(p.NBR_FULL_BATHS)
+    bedrooms: num(p.NBR_BEDROOMS), baths: num(p.NBR_FULL_BATHS),
+    sewer: str(p.SEWER_DESC), water: str(p.WATER_DESC), utilityDesc: str(p.UTILITIES_DESC), heat: [str(p.HEAT_TYPE_DESC), str(p.FUEL_TYPE_DESC)].filter(Boolean).join(' · ') || null,
+    deedRef: str(p.BOOK) && str(p.PAGE) ? `Liber ${str(p.BOOK)} / page ${str(p.PAGE)}` : null
   };
   if (nyc && unit.bbl) {
     try {
