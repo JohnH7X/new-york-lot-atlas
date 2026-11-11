@@ -3,7 +3,7 @@ import { ArrowUpRight, ChevronDown, Copy, Eye, FileText, MapPin, X } from 'lucid
 import type { LotSnapshot } from '../lib/files';
 import { useDrag } from '../lib/useDrag';
 import { territoryAt, territoryLinks, type Territory, type TerritoryLinks } from '../lib/territory';
-import { acrisSales, infrastructureAt, type Infra, type Sale, FT_PER_M, lotArea, lotCenter, lotEdges, SQFT_PER_M2, streetViewUrl, unitsInLot, type LotFeature, type Unit } from '../lib/lots';
+import { acrisSales, cattaraugusSales, infrastructureAt, type Infra, type Sale, FT_PER_M, lotArea, lotCenter, lotEdges, SQFT_PER_M2, streetViewUrl, unitsInLot, type LotFeature, type Unit } from '../lib/lots';
 
 const n = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
 const dollars = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
@@ -41,9 +41,16 @@ export default function LotPanel({ lot, address, preferPoint, zoneLine, zoneDeta
     return () => { active = false; };
   }, [lot]);
   useEffect(() => {
-    const b = units?.[0]?.bbl;
+    const u = units?.[0], b = u?.bbl;
+    let active = true;
+    if (u?.salesSource === 'cattaraugus' && u.swis && u.sbl) {
+      setSales('loading');
+      void cattaraugusSales(u.swis, u.sbl).then(r => { if (active) setSales(r); }).catch(() => { if (active) setSales(null); });
+      return () => { active = false; };
+    }
+    if (u?.sales) { setSales(u.sales); return; }
     if (!b || b.length !== 10) { setSales(null); return; }
-    let active = true; setSales('loading');
+    setSales('loading');
     void acrisSales(b).then(r => { if (active) setSales(r); }).catch(() => { if (active) setSales(null); });
     return () => { active = false; };
   }, [units]);
@@ -156,17 +163,19 @@ export default function LotPanel({ lot, address, preferPoint, zoneLine, zoneDeta
         {acris && <li><a href={acris} target="_blank" rel="noreferrer">ACRIS deeds & mortgages <ArrowUpRight size={11}/></a> — recorded documents for this BBL, free.</li>}
         {!nyc && links?.site && <li><a href={links.site} target="_blank" rel="noreferrer">County real property search <ArrowUpRight size={11}/></a> — tax map {key}.</li>}
       </ol>
-      <p className="detail-foot">Owner of record on the assessment roll (NYS public tax parcel data). Confirm the vesting deed{nyc ? ' on ACRIS' : ' with the county clerk'}.</p>
+      <p className="detail-foot">Owner of record on the assessment roll ({lot.properties.NO_LOT.startsWith('9') ? `${unit.county} County’s public parcel service${unit.source ? `, ${unit.source}` : ''}` : 'NYS public tax parcel data'}). Confirm the vesting deed{nyc ? ' on ACRIS' : ' with the county clerk'}.</p>
     </div>}
 
     {unit && tab === 'sales' && <div className="tab-body">
       <div className="sales"><b>Sales & deed history{Array.isArray(sales) && sales.length ? ` · ${sales.length} deed${sales.length > 1 ? 's' : ''}` : ''}</b>
-        {sales === 'loading' && <p className="detail-foot">Loading deeds from ACRIS…</p>}
+        {sales === 'loading' && <p className="detail-foot">{nyc ? 'Loading deeds from ACRIS…' : `Loading sales from ${unit.county} County…`}</p>}
         {Array.isArray(sales) && sales.slice(0, 25).map((x, i) => <div key={i}><span>{x.date}</span><strong>{x.price && x.price > 100 ? money(x.price) : 'No consideration'}</strong>
           <small>{[x.type, x.units > 1 ? `${x.units} units/lots` : '', x.ref].filter(Boolean).join(' · ')}{(x.seller || x.buyer) && <><br/>{x.seller && <>From {x.seller}</>}{x.seller && x.buyer && ' → '}{x.buyer && <>to {x.buyer}</>}</>}</small></div>)}
-        {Array.isArray(sales) && !sales.length && <p className="detail-foot">No deed recorded in ACRIS for this lot (records start in 1966; condo units have their own lots).</p>}
+        {nyc && Array.isArray(sales) && !sales.length && <p className="detail-foot">No deed recorded in ACRIS for this lot (records start in 1966; condo units have their own lots).</p>}
         {!nyc && <>{unit.deedRef && <div><span>Last deed</span><strong>{unit.deedRef}</strong><small>county clerk</small></div>}
-          <p className="detail-foot">Sale prices outside NYC are filed with the state (RP-5217) but not published per parcel. Dates, prices and parties are in the {unit.county} County Clerk’s records; sold prices also come from the MLS.</p></>}
+          {unit.salesSource === 'cattaraugus' && <p className="detail-foot">Sales from Cattaraugus County Real Property Services (buyer shown is the owner recorded with the sale).</p>}
+          {unit.salesSource === 'niagara' && <p className="detail-foot">Latest sale from Niagara County Real Property Services; earlier sales are in the County Clerk’s records.</p>}
+          {!unit.salesSource && <p className="detail-foot">Sale prices outside NYC are filed with the state (RP-5217) but not published per parcel. Dates, prices and parties are in the {unit.county} County Clerk’s records; sold prices also come from the MLS.</p>}</>}
         {nyc && Array.isArray(sales) && sales.length > 25 && <p className="detail-foot">Showing the 25 latest of {sales.length}. Full list on ACRIS.</p>}
       </div>
     </div>}

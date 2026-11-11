@@ -21,5 +21,11 @@
         }
       ]
     }
+  ],
+  "rewrites": [
+    {
+      "source": "/gis/niagara/:path*",
+      "destination": "https://gis.niagaracounty.gov/server/rest/services/:path*"
+    }
   ]
 }

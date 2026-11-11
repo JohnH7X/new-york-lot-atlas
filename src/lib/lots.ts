@@ -13,7 +13,7 @@ export type LotFeature = Feature<Geometry | null, ParcelProps>;
 
 /** Parcel keys are opaque; any non-empty input is passed through (map clicks use the statewide key). */
 export function normalizeLot(input: string): string {
-  return /^\d{12,}$/.test(input.trim()) ? input.trim() : '';
+  return /^\d{12,}$/.test(input.trim()) || /^9\d{3,}$/.test(input.trim()) ? input.trim() : '';
 }
 
 const LIGHT = 'SWIS_SBL_ID,PRINT_KEY,SBL,PARCEL_ADDR';
@@ -31,14 +31,103 @@ async function query(params: Record<string, string>, signal?: AbortSignal): Prom
   return data;
 }
 
-export function lotsInBounds(bounds: [number, number, number, number], signal?: AbortSignal) {
-  return query({ geometry: bounds.join(','), geometryType: 'esriGeometryEnvelope', inSR: '4326', spatialRel: 'esriSpatialRelIntersects',
+// Counties that do not share parcels with the State layer, read from each county's (or regional agency's) own public service
+// and mapped onto the State field names. Keys are '9' + 2-digit source index + object id, so they never collide with SWIS keys.
+type Attrs = Record<string, string | number | null>;
+const RPS_SEWER: Record<string, string> = { '1': 'None', '2': 'Private', '3': 'Comm/public', '4': 'Comm/private' };
+const RPS_WATER: Record<string, string> = { '1': 'None', '2': 'Private', '3': 'Comm/public', '4': 'Comm/private' };
+const s_ = (v: unknown) => typeof v === 'string' ? v.trim() || null : typeof v === 'number' ? String(v) : null;
+const words = (...v: unknown[]) => v.map(s_).filter(Boolean).join(' ') || null;
+export interface CountySource { county: string; url: string; where?: string; bbox: [number, number, number, number]; id: string; map: (a: Attrs) => Attrs; sales?: 'niagara' | 'cattaraugus'; note?: string }
+export const COUNTY_SOURCES: CountySource[] = [
+  { county: 'Nassau', url: 'https://services6.arcgis.com/dptt3Slw4IV02m0l/arcgis/rest/services/Nassau_County_Parcels_v2/FeatureServer/0', bbox: [-73.77, 40.58, -73.42, 40.92], id: 'OBJECTID',
+    map: a => ({ PARCEL_ADDR: words(a.LOC_ST_NBR, a.LOC_STREET, a.LOC_UNIT), MUNI_NAME: a.MUNI_NAME || a.CITYTOWN_N, SWIS: a.CITYTOWN_S, SBL: a.SBL, PRINT_KEY: a.MUNI_PARCE,
+      PRIMARY_OWNER: a.PRIMARY_OW, MAIL_ADDR: a.MAIL_ADDR, PO_BOX: a.PO_BOX, MAIL_CITY: a.MAIL_CITY, MAIL_STATE: a.MAIL_STATE, MAIL_ZIP: a.MAIL_ZIP, PROP_CLASS: a.PROP_CLASS, ACRES: a.ACRES }) },
+  { county: 'Monroe', url: 'https://services1.arcgis.com/yisUfwZZ4fyubK3R/arcgis/rest/services/Monroe_County_Parcels/FeatureServer/0', bbox: [-78.0, 42.94, -77.37, 43.37], id: 'OBJECTID',
+    map: a => ({ PARCEL_ADDR: a.PARCELADDRESS, MUNI_NAME: a.PARCELADDRESSCITY, SWIS: a.SWIS, SBL: a.COUNTYSBL, PRINT_KEY: a.PRINTKEY, PRIMARY_OWNER: a.OWNERNAME1, ADD_OWNER: a.OWNERNAME2,
+      MAIL_ADDR: a.OWNERSTREETADDRESS, PO_BOX: a.OWNERPOBOX, MAIL_CITY: a.OWNERCITYSTATEZIPCODE, FRONT: a.FRONTAGEFEET, DEPTH: a.DEPTHFEET, ACRES: a.ACRES, ROLL_YR: a.ROLLYEAR,
+      TOTAL_AV: a.TOTALASSESSEDVALUE, LAND_AV: a.LANDASSESSEDVALUE, SCHOOL_NAME: a.SCHOOLDISTRICTNAME, PROP_CLASS: s_(a.PROPERTYCLASS), YR_BLT: a.YEARBUILT, BLDG_STYLE_DESC: a.BUILDINGSTYLE,
+      SQFT_LIVING: a.SQUAREFEETLIVINGAREA, NBR_BEDROOMS: a.NUMBEROFBEDROOMS, NBR_FULL_BATHS: a.NUMBEROFFULLBATHROOMS, HEAT_TYPE_DESC: a.HEATTYPE, SEWER_DESC: a.SEWERTYPE, WATER_DESC: a.WATERSUPPLY,
+      BOOK: a.HISTBOOK, PAGE: a.HISTPAGE }) },
+  { county: 'Saratoga', url: 'https://services8.arcgis.com/L31p4Kvi5t2HjDqc/arcgis/rest/services/Parcels/FeatureServer/57', bbox: [-74.16, 42.77, -73.57, 43.4], id: 'OBJECTID',
+    map: a => ({ PARCEL_ADDR: a.PROP_ADDR, MUNI_NAME: a.MUNI, SWIS: a.SWIS, SBL: a.SBL, PRINT_KEY: a.PRINT_KEY, PRIMARY_OWNER: a.OWNER, MAIL_ADDR: words(a.MAIL_1ADDR, a.MAIL_2ADDR), MAIL_CITY: a.MAIL_CITY,
+      MAIL_STATE: a.MAIL_STATE, MAIL_ZIP: a.MAIL_ZIP, ACRES: a.ACRES, FRONT: a.FRONTAGE, DEPTH: a.DEPTH, PROP_CLASS: a.PRP_CLS_CODE, LAND_AV: a.LAND_AV, TOTAL_AV: a.TOTAL_AV, SCHOOL_NAME: a.SCHOOL,
+      WATER_DESC: a.WATER, SEWER_DESC: a.SEWER, UTILITIES_DESC: a.UTILITIES, BOOK: a.DEED_BOOK, PAGE: a.DEED_PAGE, ROLL_YR: a.ROLL_YEAR }) },
+  { county: 'Schoharie', url: 'https://services7.arcgis.com/fScJUugRnMdg5KWv/arcgis/rest/services/Parcels/FeatureServer/5', bbox: [-74.72, 42.35, -74.16, 42.83], id: 'OBJECTID',
+    map: a => ({ PARCEL_ADDR: words(a.LOC_NUMBER, a.LOC_STREET), MUNI_NAME: a.MUNI, SWIS: a.SWIS, SBL: a.SBL, PRINT_KEY: a.PRINT_KEY, PRIMARY_OWNER: a.OWNER, ADD_OWNER: a.OWNER2,
+      MAIL_ADDR: words(a.MAIL_1ADDR, a.MAIL_2ADDR), MAIL_CITY: a.MAIL_CITY, MAIL_STATE: a.MAIL_STATE, MAIL_ZIP: a.MAIL_ZIP, ACRES: a.ACRES_1, PROP_CLASS: a.PRP_CLS_CO, LAND_AV: a.LAND_AV,
+      TOTAL_AV: a.TOTAL_AV, BOOK: a.DEED_BOOK, PAGE: a.DEED_PAGE }) },
+  { county: 'Schenectady', url: 'https://services3.arcgis.com/DvTqoyLKkslnGFR5/arcgis/rest/services/Final21/FeatureServer/0', bbox: [-74.31, 42.71, -73.8, 42.96], id: 'FID',
+    note: 'roll extract from 2021',
+    map: a => ({ PARCEL_ADDR: a.PROP_ADDR, SWIS: s_(a.SWIS), PRINT_KEY: a.PRINT_KEY, PRIMARY_OWNER: a.OWNER, MAIL_ADDR: a.STREET, MAIL_CITY: a.CITY_STATE, ACRES: a.ACRES, FRONT: a.FRONT_FEET,
+      DEPTH: a.DEPTH_FEET, PROP_CLASS: a.PROP_CLASS, TOTAL_AV: a.CURR_TOT, ROLL_YR: '2021' }) },
+  // Development Authority of the North Country: Clinton, Essex, Franklin and Jefferson (its other counties are in the State layer).
+  { county: '', url: 'https://maps.dancgis.org/server/rest/services/Parcel_Model/MapServer/0', where: "COUNTY IN ('CLINTON','ESSEX','FRANKLIN','Jefferson','JEFFERSON - Watertown')",
+    bbox: [-76.45, 43.62, -73.28, 45.06], id: 'OBJECTID',
+    map: a => ({ COUNTY_NAME: String(a.COUNTY || '').replace(/ - .*/, '').toLowerCase().replace(/^./, c => c.toUpperCase()), PARCEL_ADDR: a.PARCEL_ADD, MUNI_NAME: a.MUNI_NAME, SWIS: a.SWIS, SBL: a.SBL,
+      PRINT_KEY: a.PRINT_KEY, PRIMARY_OWNER: a.PRIMARY_OW, ADD_OWNER: a.ADD_OWNER, MAIL_ADDR: words(a.MAIL_ADDR, a.MAIL_ADDR2), MAIL_CITY: a.MAIL_CITY, MAIL_STATE: a.MAIL_STATE, MAIL_ZIP: a.MAIL_ZIP,
+      ACRES: a.ACRES, CALC_ACRES: a.CALC_ACRES, FRONT: a.FRONT, PROP_CLASS: a.PROP_CLASS, LAND_AV: a.LAND_AV, TOTAL_AV: a.TOTAL_AV, FULL_MARKET_VAL: a.FULL_MARKE, YR_BLT: a.YR_BLT }) },
+  // Mohawk Valley regional layer: class, year built, water and sewer only (no owner names).
+  { county: '', url: 'https://services2.arcgis.com/okXm0pb6aWH6XOGI/arcgis/rest/services/Tax_Parcels_new/FeatureServer/0', where: "County IN ('Delaware','Fulton','Herkimer','Madison')",
+    bbox: [-76.01, 41.85, -74.08, 44.1], id: 'OBJECTID', note: 'regional layer without owner names',
+    map: a => ({ COUNTY_NAME: a.County, SWIS: a.SWIS, SBL: a.SBL, PRINT_KEY: a.PrintKey, PROP_CLASS: a.PROP_CLASS, YR_BLT: a.YR_BUILT, SEWER_DESC: RPS_SEWER[String(a.SEWER)] || null,
+      WATER_DESC: RPS_WATER[String(a.WATCODE)] || null }) },
+  // Niagara's server sends no CORS headers, so it goes through the site's /gis/niagara rewrite.
+  { county: 'Niagara', url: '/gis/niagara/PublicViewer/Public_Viewer/FeatureServer/4', bbox: [-79.08, 43.01, -78.46, 43.38], id: 'OBJECTID_1', sales: 'niagara',
+    map: a => ({ PARCEL_ADDR: words(a.PrclNumb, a.PrclStreet), MUNI_NAME: a.PrclMuni, SWIS: a.SwisCode, SBL: a.SBL, PRINT_KEY: a.PrintKey, PRIMARY_OWNER: a.OwnrName, MAIL_ADDR: a.own_street_address,
+      MAIL_CITY: a.own_city_state_zip, ACRES: a.ACRES, FRONT: a.Frontage, DEPTH: a.Depth, PROP_CLASS: a.PropClsite, LAND_AV: a.LandAssess, TOTAL_AV: a.TotAssess, FULL_MARKET_VAL: a.FullMktVal,
+      YR_BLT: a.YrBuilt, BLDG_STYLE_DESC: a.Bldgstyl, SQFT_LIVING: a.SFLA, BOOK: a.Book, PAGE: a.Page, NIAGARA_SALE_DATE: a.SaleDate, NIAGARA_SALE_PRICE: a.SalePrice }) },
+  { county: 'Cattaraugus', url: 'https://maps2.cattco.org/arcgiswebadaptor/rest/services/ParcelandSales_Viewer/MapServer/3', bbox: [-79.07, 41.99, -78.3, 42.55], id: 'OBJECTID', sales: 'cattaraugus',
+    map: a => ({ PARCEL_ADDR: words(a.LOC_NO, a.PROP_LOC), SWIS: a.SWIS, PRINT_KEY: a.TAX_MAP_NO, SBL: a.PRINTKEY, PRIMARY_OWNER: a.OWNER1, MAIL_ADDR: words(a.PO_BOX, a.STREET), MAIL_CITY: a.CITY_STATE,
+      PROP_CLASS: a.CLASS_CODE, ACRES: a.ACRES, FRONT: a.FRONTAGE, DEPTH: a.DEPTH, BOOK: a.DEED_BOOK, PAGE: a.DEED_PAGE }) },
+  { county: 'Chemung', url: 'https://services5.arcgis.com/Zuw6weNBpZX2wFbS/arcgis/rest/services/Chemung_County_Property_Parcels/FeatureServer/0', bbox: [-76.97, 41.99, -76.53, 42.3], id: 'OBJECTID',
+    note: 'parcel map without assessment data',
+    map: a => ({ PARCEL_ADDR: a.RPS_ADDRESS || a.Parcel_Location, MUNI_NAME: a.Muni_Name, SBL: a.SBL, PRINT_KEY: a.PrintKey, CALC_ACRES: a.Calc_Acre, DEED_REF: a.DEEDBK_PG }) },
+  { county: 'Dutchess', url: 'https://services7.arcgis.com/qa9lgxOEmOSHoWNZ/arcgis/rest/services/County_Parcels/FeatureServer/0', bbox: [-74.0, 41.44, -73.48, 42.09], id: 'FID',
+    note: 'parcel map without assessment data',
+    map: a => ({ SWIS: a.Swis, PRINT_KEY: a.PrintKey, SBL: a.Parcelgrid }) }
+];
+/** Counties with no open parcel service at all (owners and values only on each county's own site). */
+export const CLOSED_COUNTIES = ['Allegany', 'Chenango', 'Columbia', 'Orleans', 'Seneca', 'Washington', 'Yates'];
+
+async function countyQuery(i: number, params: Record<string, string>, signal?: AbortSignal): Promise<LotFeature[]> {
+  const src = COUNTY_SOURCES[i];
+  const p = { outFields: '*', outSR: '4326', f: 'geojson', where: src.where || '1=1', ...params };
+  if (src.where && params.where) p.where = `(${src.where}) AND (${params.where})`;
+  const response = await fetch(`${src.url}/query`, { method: 'POST', body: new URLSearchParams(p), signal });
+  if (!response.ok) return [];
+  const data = await response.json();
+  if (data.error || !Array.isArray(data.features)) return [];
+  return data.features.map((f: LotFeature & { id?: number }) => {
+    const a = f.properties as unknown as Attrs || {};
+    const oid = Number(a[src.id] ?? f.id ?? 0);
+    const m = src.map(a);
+    const props: ParcelProps = { COUNTY_NAME: src.county || null, ...Object.fromEntries(Object.entries(m).map(([k, v]) => [k, typeof v === 'string' ? v.trim() || null : v ?? null])),
+      NO_LOT: `9${String(i).padStart(2, '0')}${oid}`, LABEL: String(m.PRINT_KEY || m.SBL || oid), SWIS_SBL_ID: `9${String(i).padStart(2, '0')}${oid}`,
+      SOURCE: src.note || null, SALES_SOURCE: src.sales || null } as ParcelProps;
+    return { ...f, properties: props };
+  });
+}
+const overlaps = (b: [number, number, number, number], c: [number, number, number, number]) => b[0] <= c[2] && b[2] >= c[0] && b[1] <= c[3] && b[3] >= c[1];
+
+export async function lotsInBounds(bounds: [number, number, number, number], signal?: AbortSignal) {
+  const state = query({ geometry: bounds.join(','), geometryType: 'esriGeometryEnvelope', inSR: '4326', spatialRel: 'esriSpatialRelIntersects',
     returnGeometry: 'true', outFields: LIGHT, resultRecordCount: '2000' }, signal);
+  const counties = COUNTY_SOURCES.map((s, i) => overlaps(bounds, s.bbox) ? countyQuery(i, { geometry: bounds.join(','), geometryType: 'esriGeometryEnvelope', inSR: '4326',
+    spatialRel: 'esriSpatialRelIntersects', returnGeometry: 'true', resultRecordCount: '2000' }, signal).catch(() => []) : Promise.resolve([] as LotFeature[]));
+  const [data, ...extra] = await Promise.all([state, ...counties]);
+  data.features.push(...extra.flat());
+  return data;
 }
 
 export async function findLot(input: string, signal?: AbortSignal): Promise<LotFeature | null> {
   const key = input.trim().replace(/'/g, '');
   if (!key) return null;
+  if (/^9\d{3,}$/.test(key)) {
+    const i = Number(key.slice(1, 3)), src = COUNTY_SOURCES[i];
+    if (!src) return null;
+    return (await countyQuery(i, { where: `${src.id} = ${Number(key.slice(3))}`, returnGeometry: 'true' }, signal))[0] || null;
+  }
   const data = await query({ where: `SWIS_SBL_ID = '${key}'`, returnGeometry: 'true' }, signal);
   return data.features[0] || null;
 }
@@ -104,7 +193,7 @@ export interface Unit {
   county?: string | null; muni?: string | null; swis?: string | null; sbl?: string | null; bbl?: string | null; agDistrict?: string | null; sewer?: string | null; water?: string | null; utilityDesc?: string | null; heat?: string | null; deedRef?: string | null; sales?: Sale[] | null; infra?: Infra | null;
   utilities?: string | null; bedrooms?: number | null; baths?: number | null;
   zoning?: string | null; overlays?: string | null; special?: string | null; far?: string | null; landmark?: string | null; histDistrict?: string | null;
-  depth?: number | null;
+  depth?: number | null; source?: string | null; salesSource?: string | null;
 }
 
 // NYS Real Property System property class codes (first digit is the group).
@@ -155,6 +244,16 @@ export async function acrisSales(bbl: string): Promise<Sale[]> {
       units: new Set(legals.filter(l => l.document_id === d.document_id).map(l => l.unit || '')).size };
   }).sort((a, b) => b.t - a.t).map(({ t: _t, ...x }) => x);
 }
+/** Every recorded sale on a Cattaraugus County parcel, from the county's public sales layer. */
+export async function cattaraugusSales(swis: string, printKey: string): Promise<Sale[]> {
+  const body = new URLSearchParams({ where: `SwisCode = '${swis.replace(/'/g, '')}' AND PrintKey = '${printKey.replace(/'/g, '')}'`, outFields: 'SDate,SalePrice,OwnrName,ValUseable', orderByFields: 'SDate DESC', returnGeometry: 'false', f: 'json' });
+  const d = await (await fetch('https://maps2.cattco.org/arcgiswebadaptor/rest/services/ParcelandSales_Viewer/MapServer/0/query', { method: 'POST', body })).json();
+  return (d.features || []).map((f: { attributes: Attrs }) => {
+    const a = f.attributes, dt = new Date(Number(a.SDate));
+    return { date: isNaN(+dt) ? '—' : `${MONTHS[dt.getUTCMonth()]} ${dt.getUTCDate()}, ${dt.getUTCFullYear()}`, price: Number(a.SalePrice) || null,
+      type: a.ValUseable === '1' ? 'Arm’s-length sale' : 'Sale (not arm’s-length)', buyer: s_(a.OwnrName), seller: null, ref: null, units: 1 };
+  });
+}
 const ELECTRIC = 'https://services1.arcgis.com/XYYbHZEGlLw0p2gz/arcgis/rest/services/NYS_Electric_Utility_Service_Territories_20240820/FeatureServer/0/query';
 export async function infrastructureAt([x, y]: [number, number]): Promise<Infra> {
   const q = new URLSearchParams({ geometry: `${x},${y}`, geometryType: 'esriGeometryPoint', inSR: '4326', spatialRel: 'esriSpatialRelIntersects', outFields: 'comp_full,notes', returnGeometry: 'false', f: 'json' });
@@ -164,7 +263,7 @@ export async function infrastructureAt([x, y]: [number, number]): Promise<Infra>
 
 export async function unitsInLot(feature: LotFeature): Promise<Unit[]> {
   const p = feature.properties;
-  if (!p || (p.TOTAL_AV == null && p.PRIMARY_OWNER == null && p.PROP_CLASS == null)) return [];
+  if (!p || (p.TOTAL_AV == null && p.PRIMARY_OWNER == null && p.PROP_CLASS == null && p.PARCEL_ADDR == null && p.SOURCE == null)) return [];
   const nyc = NYC_COUNTIES.has(String(p.COUNTY_NAME));
   const acres = num(p.ACRES) || num(p.CALC_ACRES);
   const land = num(p.LAND_AV), total = num(p.TOTAL_AV);
@@ -184,8 +283,13 @@ export async function unitsInLot(feature: LotFeature): Promise<Unit[]> {
     utilities: [str(p.SEWER_DESC), str(p.WATER_DESC), str(p.HEAT_TYPE_DESC), str(p.FUEL_TYPE_DESC)].filter(Boolean).join(' · ') || null,
     bedrooms: num(p.NBR_BEDROOMS), baths: num(p.NBR_FULL_BATHS),
     sewer: str(p.SEWER_DESC), water: str(p.WATER_DESC), utilityDesc: str(p.UTILITIES_DESC), heat: [str(p.HEAT_TYPE_DESC), str(p.FUEL_TYPE_DESC)].filter(Boolean).join(' · ') || null,
-    deedRef: str(p.BOOK) && str(p.PAGE) ? `Liber ${str(p.BOOK)} / page ${str(p.PAGE)}` : null
+    deedRef: str(p.BOOK) && str(p.PAGE) ? `Liber ${str(p.BOOK)} / page ${str(p.PAGE)}` : str(p.DEED_REF) ? `Liber / page ${str(p.DEED_REF)}` : null,
+    source: str(p.SOURCE), salesSource: str(p.SALES_SOURCE)
   };
+  if (unit.salesSource === 'niagara' && num(p.NIAGARA_SALE_PRICE)) {
+    const m = String(p.NIAGARA_SALE_DATE || '').match(/(\d{4})\/(\d{1,2})\/(\d{1,2})/);
+    unit.sales = [{ date: m ? `${MONTHS[+m[2] - 1]} ${+m[3]}, ${m[1]}` : '—', price: num(p.NIAGARA_SALE_PRICE), type: "Sale (assessor)", buyer: null, seller: null, ref: unit.deedRef ?? null, units: 1 }];
+  }
   if (nyc && unit.bbl) {
     try {
       const body = new URLSearchParams({ where: `BBL = ${Number(unit.bbl)}`, outFields: 'ZoneDist1,ZoneDist2,Overlay1,Overlay2,SPDist1,SPDist2,BuiltFAR,ResidFAR,CommFAR,FacilFAR,NumFloors,UnitsRes,UnitsTotal,Landmark,HistDist,OwnerName,LotArea,BldgArea,LotDepth',
@@ -221,8 +325,15 @@ export async function unitsByLotNumber(_lot: string): Promise<Unit[] | null> {
 
 /** Cadastre lot under a point (used when an address is chosen). */
 export async function lotAtPoint([lng, lat]: [number, number], signal?: AbortSignal, address = ''): Promise<LotFeature | null> {
-  const at = (distance?: number) => query({ geometry: `${lng},${lat}`, geometryType: 'esriGeometryPoint', inSR: '4326', spatialRel: 'esriSpatialRelIntersects',
-    returnGeometry: 'true', ...(distance ? { distance: String(distance), units: 'esriSRUnit_Meter' } : {}) }, signal);
+  const at = async (distance?: number) => {
+    const params = { geometry: `${lng},${lat}`, geometryType: 'esriGeometryPoint', inSR: '4326', spatialRel: 'esriSpatialRelIntersects',
+      returnGeometry: 'true', ...(distance ? { distance: String(distance), units: 'esriSRUnit_Meter' } : {}) };
+    const box: [number, number, number, number] = [lng, lat, lng, lat];
+    const [data, ...extra] = await Promise.all([query(params, signal),
+      ...COUNTY_SOURCES.map((s, i) => overlaps(box, s.bbox) ? countyQuery(i, params, signal).catch(() => []) : Promise.resolve([] as LotFeature[]))]);
+    data.features.push(...extra.flat());
+    return data;
+  };
   const number = address.match(/^\s*([\d-]+)/)?.[1].replace(/-/g, '') || '';
   const matches = (f: LotFeature) => !!number && String(f.properties.PARCEL_ADDR || '').replace(/-/g, '').startsWith(number + ' ');
   const exact = (await at()).features.filter(f => f.geometry);
