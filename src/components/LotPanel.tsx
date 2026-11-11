@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { ArrowUpRight, ChevronDown, Copy, Eye, FileText, MapPin, UserSearch, X } from 'lucide-react';
+import { ArrowUpRight, ChevronDown, Copy, Eye, FileText, MapPin, X } from 'lucide-react';
 import type { LotSnapshot } from '../lib/files';
 import { useDrag } from '../lib/useDrag';
 import { territoryAt, territoryLinks, type Territory, type TerritoryLinks } from '../lib/territory';
@@ -29,7 +29,8 @@ interface Props {
 export default function LotPanel({ lot, address, preferPoint, zoneLine, zoneDetails, zoneText, zoneGrid, onReport, onClose }: Props) {
   const [units, setUnits] = useState<Unit[] | null>(null);
   const [copied, setCopied] = useState(false);
-  const [ownerOpen, setOwnerOpen] = useState(false);
+  const [tab, setTab] = useState<'overview' | 'owner' | 'sales' | 'infra' | 'lot'>('overview');
+  useEffect(() => { setTab('overview'); }, [lot]);
   const [infra, setInfra] = useState<Infra | null | 'loading'>('loading');
   const [sales, setSales] = useState<Sale[] | null | 'loading'>(null);
   useEffect(() => {
@@ -60,7 +61,7 @@ export default function LotPanel({ lot, address, preferPoint, zoneLine, zoneDeta
   }, [lot]);
   useEffect(() => {
     let active = true;
-    setUnits(null); setOwnerOpen(false);
+    setUnits(null);
     void unitsInLot(lot).then(found => { if (active) setUnits(found); }).catch(() => { if (active) setUnits([]); });
     return () => { active = false; };
   }, [lot]);
@@ -113,10 +114,13 @@ export default function LotPanel({ lot, address, preferPoint, zoneLine, zoneDeta
     {units === null && <p className="detail-note" role="status">Loading assessment…</p>}
     {units?.length === 0 && <p className="detail-note">No assessment record on this parcel. Check the county’s real property office.</p>}
 
-    {unit && <>
+    {unit && <div className="tabs" role="tablist">{(['overview', 'owner', 'sales', 'infra', 'lot'] as const).map(t => <button key={t} role="tab" aria-selected={tab === t} className={tab === t ? 'on' : ''} onClick={() => setTab(t)}>
+      {t === 'overview' ? 'Overview' : t === 'owner' ? 'Owner' : t === 'sales' ? (Array.isArray(sales) && sales.length ? `Sales (${sales.length})` : 'Sales') : t === 'infra' ? 'Utilities' : 'Lot'}</button>)}</div>}
+
+    {unit && tab === 'overview' && <>
       <div className="value-hero"><span>{unit.marketValue ? 'Full market value · appraisal' : 'Total assessed value'}</span><strong>{money(unit.marketValue ?? unit.totalValue)}</strong>
         <small>{unit.marketDate || 'Assessment roll'} · {nyc ? 'NYC Department of Finance' : `${unit.muni || unit.county || ''} assessor`}</small></div>
-      <div className="owner-line"><span>Owner of record</span><b>{unit.owner || 'Not published by this county — see its property search'}</b>{unit.ownerMail && <small>{unit.ownerMail}</small>}</div>
+      <button className="owner-line as-link" onClick={() => setTab('owner')}><span>Owner of record</span><b>{unit.owner || 'Not published by this county'}</b><small>Owner details →</small></button>
       <table className="appraisal"><tbody>
         {unit.marketValue != null && <tr className="sum"><th>Full market value</th><td>{money(unit.marketValue)}</td></tr>}
         {unit.previousValue != null && <tr><th>Previous year market value</th><td>{money(unit.previousValue)}</td></tr>}
@@ -136,6 +140,26 @@ export default function LotPanel({ lot, address, preferPoint, zoneLine, zoneDeta
         {(unit.landmark || unit.histDistrict) && <div><dt>Landmark</dt><dd>{[unit.landmark, unit.histDistrict].filter(Boolean).join(' · ')}</dd></div>}
         {unit.agDistrict && <div><dt>Agricultural district</dt><dd>{unit.agDistrict}</dd></div>}
       </dl>
+      {Array.isArray(sales) && sales[0] && <button className="owner-line as-link" onClick={() => setTab('sales')}><span>Last deed</span><b>{sales[0].price && sales[0].price > 100 ? money(sales[0].price) : 'No consideration'} · {sales[0].date}</b><small>Full deed history →</small></button>}
+    </>}
+
+    {unit && tab === 'owner' && <div className="tab-body">
+      <div className="owner-line"><span>Owner of record</span><b>{unit.owner || 'Not published by this county — see its property search'}</b></div>
+      <dl className="fact-grid">
+        <div><dt>Mailing address</dt><dd>{unit.ownerMail || '—'}</dd></div>
+        <div><dt>{nyc ? 'BBL' : 'Tax map'}</dt><dd>{bbl || key}</dd></div>
+        <div><dt>County</dt><dd>{unit.county || '—'}</dd></div>
+        <div><dt>Municipality</dt><dd>{unit.muni || '—'}</dd></div>
+        {Array.isArray(sales) && sales[0]?.buyer && <div><dt>Acquired</dt><dd>{sales[0].date}<small>{sales[0].price && sales[0].price > 100 ? money(sales[0].price) : 'no consideration'}</small></dd></div>}
+      </dl>
+      <ol className="owner-links">
+        {acris && <li><a href={acris} target="_blank" rel="noreferrer">ACRIS deeds & mortgages <ArrowUpRight size={11}/></a> — recorded documents for this BBL, free.</li>}
+        {!nyc && links?.site && <li><a href={links.site} target="_blank" rel="noreferrer">County real property search <ArrowUpRight size={11}/></a> — tax map {key}.</li>}
+      </ol>
+      <p className="detail-foot">Owner of record on the assessment roll (NYS public tax parcel data). Confirm the vesting deed{nyc ? ' on ACRIS' : ' with the county clerk'}.</p>
+    </div>}
+
+    {unit && tab === 'sales' && <div className="tab-body">
       <div className="sales"><b>Sales & deed history{Array.isArray(sales) && sales.length ? ` · ${sales.length} deed${sales.length > 1 ? 's' : ''}` : ''}</b>
         {sales === 'loading' && <p className="detail-foot">Loading deeds from ACRIS…</p>}
         {Array.isArray(sales) && sales.slice(0, 25).map((x, i) => <div key={i}><span>{x.date}</span><strong>{x.price && x.price > 100 ? money(x.price) : 'No consideration'}</strong>
@@ -145,8 +169,9 @@ export default function LotPanel({ lot, address, preferPoint, zoneLine, zoneDeta
           <p className="detail-foot">Sale prices outside NYC are filed with the state (RP-5217) but not published per parcel. Dates, prices and parties are in the {unit.county} County Clerk’s records; sold prices also come from the MLS.</p></>}
         {nyc && Array.isArray(sales) && sales.length > 25 && <p className="detail-foot">Showing the 25 latest of {sales.length}. Full list on ACRIS.</p>}
       </div>
-      <details className="infra" open>
-        <summary>Infrastructure availability<ChevronDown size={14}/></summary>
+    </div>}
+
+    {unit && tab === 'infra' && <div className="tab-body infra">
         <ul>
           <li className={nyc || /public|comm/i.test(unit.water || '') ? 'ok' : /private|well/i.test(unit.water || '') ? 'warn' : 'q'}><span>Water</span><b>{nyc ? 'NYC public water (DEP)' : unit.water || 'Not on the roll'}</b></li>
           <li className={nyc || /public|comm/i.test(unit.sewer || '') ? 'ok' : /private|septic/i.test(unit.sewer || '') ? 'warn' : 'q'}><span>Sewer</span><b>{nyc ? 'NYC public sewer (DEP)' : unit.sewer || 'Not on the roll'}</b></li>
@@ -156,12 +181,11 @@ export default function LotPanel({ lot, address, preferPoint, zoneLine, zoneDeta
           <li className="q"><span>Gas · road · drainage · fees</span><b>Confirm with the utility and the town</b></li>
         </ul>
         <p className="detail-foot">Water, sewer and utilities: the assessor’s roll (outside NYC). Electric: NYS PSC service territories. Full checklist in the property file.</p>
-      </details>
-    </>}
-    {!unit && area !== null && <dl className="fact-grid"><div><dt>Lot area (drawing)</dt><dd>{sqft(area, true)}</dd></div></dl>}
+    </div>}
 
-    {edges.length > 0 && <details className="measure">
-      <summary>Lot measurements<ChevronDown size={14}/></summary>
+    {(tab === 'lot' || !unit) && <div className="tab-body">
+      {!unit && area !== null && <dl className="fact-grid"><div><dt>Lot area (drawing)</dt><dd>{sqft(area, true)}</dd></div></dl>}
+      {edges.length > 0 && <>
       <dl className="fact-grid">
         {unit?.frontage != null && <div><dt>Frontage (roll)</dt><dd>{len(unit.frontage)}</dd></div>}
         {unit?.depth != null && <div><dt>Depth (roll)</dt><dd>{len(unit.depth)}</dd></div>}
@@ -170,18 +194,9 @@ export default function LotPanel({ lot, address, preferPoint, zoneLine, zoneDeta
       </dl>
       <ol className="side-list">{edges.map((e, i) => <li key={i}><span>Side {i + 1}</span><strong>{(e.length * FT_PER_M).toFixed(1)} ft</strong><small>{e.length.toFixed(1)} m</small></li>)}</ol>
       <p className="detail-foot">Sides are measured on the county tax-map drawing, not a survey. Frontage and depth are the assessor’s figures.</p>
-    </details>}
-
-    <button className="owner-button" onClick={() => setOwnerOpen(o => !o)} disabled={units === null}><UserSearch size={15}/> Get owner</button>
-    {ownerOpen && <div className="owner-steps" role="status">
-      {unit?.owner ? <><b>{unit.owner}</b>{unit.ownerMail && <p>Mailing address: {unit.ownerMail}</p>}<p className="detail-foot">Owner of record on the county assessment roll (NYS public tax parcel data). Confirm the vesting deed{nyc ? ' on ACRIS' : ' with the county clerk'}.</p></>
-        : <p>This county does not publish owner names in the state’s open parcel layer. Use the county’s real property search below.</p>}
-      <ol>
-        {acris && <li><a href={acris} target="_blank" rel="noreferrer">ACRIS deeds & mortgages <ArrowUpRight size={11}/></a> — recorded documents for this BBL, free.</li>}
-        {!nyc && links?.site && <li><a href={links.site} target="_blank" rel="noreferrer">County real property search <ArrowUpRight size={11}/></a> — tax map {key}.</li>}
-      </ol>
-      <button onClick={() => setOwnerOpen(false)}>Close</button>
+      </>}
     </div>}
+
     {onReport && <button className="report-button" onClick={report} disabled={units === null}><FileText size={15}/> Create report</button>}
     {viewPoint && <a className="street-view-button" href={streetViewUrl(viewPoint)} target="_blank" rel="noreferrer"><Eye size={15}/> Street View <ArrowUpRight size={13}/></a>}
 
