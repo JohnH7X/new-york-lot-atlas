@@ -400,3 +400,21 @@ export function lotEdges(feature: LotFeature): LotEdge[] {
   }).filter(e => e.length >= 0.5);
 }
 export const FT_PER_M = 3.28084;
+
+const tipEsc = (v: unknown) => String(v ?? '').replace(/[<>&"]/g, '');
+const tipRow = (a: string, b: string) => `<div class="tip-sale"><span>${tipEsc(a)}</span><b>${tipEsc(b)}</b></div>`;
+/** Hover label body for the Sales tab: the parcel's latest recorded sales (ACRIS in NYC, county rolls elsewhere). */
+export async function hoverSales(c: [number, number]): Promise<string> {
+  const lot = await lotAtPoint(c); if (!lot) return '<br><small>No parcel here</small>';
+  const u = (await unitsInLot(lot))[0];
+  const addr = u?.label && u.label !== lot.properties.LABEL ? `<br>${tipEsc(u.label)}` : '';
+  let sales: Sale[] | null = null;
+  if (u?.salesSource === 'cattaraugus' && u.swis && u.sbl) sales = await cattaraugusSales(u.swis, u.sbl);
+  else if (u?.sales) sales = u.sales;
+  else if (u?.bbl && u.bbl.length === 10) sales = await acrisSales(u.bbl);
+  if (!sales) return `${addr}<small>No public sales feed for this county · click for links</small>`;
+  if (!sales.length) return `${addr}<br><small>No recorded sale · click for links</small>`;
+  const priced = sales.filter(s => s.price && s.price > 100);
+  const rows = (priced.length ? priced : sales).slice(0, 3).map(s => tipRow(s.date, s.price && s.price > 100 ? '$' + s.price.toLocaleString('en-US') : s.type)).join('');
+  return `${addr}${rows || '<br><small>No recorded sale</small>'}<small>${sales.length} record${sales.length === 1 ? '' : 's'} · click for full history</small>`;
+}
